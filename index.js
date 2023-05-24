@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const fs = require('fs')
 const { Command } = require('commander');
 const axios = require('axios');
@@ -10,7 +11,7 @@ const program = new Command();
 let validate = false;
 let stats = false;
 let arrayLinks = [];
-let path = "" ;
+let path = "";
 
 function receberComandoCLIeIniciarPrograma() {
   program
@@ -33,7 +34,7 @@ function receberComandoCLIeIniciarPrograma() {
 
 function mdLinks(path, options) {
   // os o FS (filesystem) para ler o arquivo
-  fs.readFile(path, 'utf8', async (err,conteudo) => {
+  fs.readFile(path, 'utf8', (err,conteudo) => {
 
     if(err) {
       console.log('Arquivo nao encontrado')
@@ -41,8 +42,9 @@ function mdLinks(path, options) {
       // divide o arquivo em linha-por-linha
       const lines = conteudo.split('\n');
       verificaSeTemLink(lines)
-      await validateLink(options)//esperar a funcao terminar de ser executada
-      formatarSaida(options)
+      validateLink(options).then(()=>{
+        formatarSaida(options)
+      })//esperar a funcao terminar de ser executada
     }
   });    
 }
@@ -64,16 +66,17 @@ function verificaSeTemLink(lines) {
 }
 
 
-async function validateLink(option){
+function validateLink(option){
   if(option.validate){
     const linkPromises = arrayLinks.map(item => acessLink(item));
 
-    await Promise.all(linkPromises)
+    return Promise.all(linkPromises)
       .then()
       .catch(error => {
         console.error('Ocorreu um erro ao validar os links:', error);
       });
   }
+  return Promise.resolve()
   
 }
 
