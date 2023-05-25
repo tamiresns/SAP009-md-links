@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const fs = require('fs')
+const path = require('path');
 const { Command } = require('commander');
 const axios = require('axios');
 
@@ -11,7 +12,6 @@ const program = new Command();
 let validate = false;
 let stats = false;
 let arrayLinks = [];
-let path = "";
 
 function receberComandoCLIeIniciarPrograma() {
   program
@@ -20,11 +20,10 @@ function receberComandoCLIeIniciarPrograma() {
   .option('--s, --stats', 'Muda a saida do programa para um resumo simplificado')
   .action((arg, options) => {
     // caputando os argumentos do cli em variáveis
-    path = arg;
     validate = options.validate || false; //se nao informado, define como falso
     stats = options.stats || false; //se nao informado, define como falso
     //chamando meu metodo para processar o arquivo
-    mdLinks(path, {"validate":validate, "stats":stats})
+    mdLinks(arg, {"validate":validate, "stats":stats})
   });
 
   program.parse(process.argv);
@@ -34,20 +33,60 @@ function receberComandoCLIeIniciarPrograma() {
 
 function mdLinks(path, options) {
   // os o FS (filesystem) para ler o arquivo
-  fs.readFile(path, 'utf8', (err,conteudo) => {
-
+  fs.lstat(path, (err, stats) => {
     if(err) {
-      console.log('Arquivo nao encontrado')
+      console.log('Erro ao acessar o caminho:', err);
     } else {
-      // divide o arquivo em linha-por-linha
-      const lines = conteudo.split('\n');
-      verificaSeTemLink(lines)
-      validateLink(options).then(()=>{
-        formatarSaida(options)
-      })//esperar a funcao terminar de ser executada
+      if (stats.isFile()) {
+        console.log('[DEBUG] é arquivo')
+        // Se for um arquivo, chame a função para processar o arquivo
+        processFile(path, options).then(() => formatarSaida(options));
+      } else if (stats.isDirectory()) {
+        // Se for um diretório, chame a função para processar todos os arquivos do diretório
+        console.log('[DEBUG] é diretorio')
+        processDirectory(path, options);
+      }
     }
   });    
 }
+
+function processFile(filePath, options) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filePath, 'utf8', (err, conteudo) => {
+      if (err) {
+        console.log('Erro ao ler o arquivo:', err);
+        resolve();
+      } else {
+        const lines = conteudo.split('\n');
+        verificaSeTemLink(lines)
+        validateLink(options)
+        .then(() => resolve())
+        .catch(error => {
+          console.error('Ocorreu um erro ao validar os links:', error);
+          resolve();
+        });
+      }
+    });
+  })
+}
+
+function processDirectory(directoryPath, options) {
+  fs.readdir(directoryPath, (err, files) => {
+    if (err) {
+      console.log('Erro ao ler o diretório:', err);
+    } else {
+      const filePromises = files.map(file => {
+        const filePath = path.join(directoryPath, file);
+        return processFile(filePath, options);
+      });
+
+      Promise.all(filePromises)
+        .then(() => formatarSaida(options))
+        .catch(error => console.error('Ocorreu um erro:', error));
+      }
+  });
+}
+
 
 function verificaSeTemLink(lines) {
   //regex para testra se tem links no formato []()
@@ -71,35 +110,28 @@ function validateLink(option){
     const linkPromises = arrayLinks.map(item => acessLink(item));
 
     return Promise.all(linkPromises)
-      .then()
-      .catch(error => {
-        console.error('Ocorreu um erro ao validar os links:', error);
-      });
-  }
-  return Promise.resolve()
-  
+  }else{
+    return Promise.resolve()
+  } 
 }
 
 function acessLink(item) {
-  return new Promise((resolve, reject) => {
-    axios.head(item.link)
+  return axios.head(item.link)
       .then(response => {
         if (response.status >= 0 && response.status <= 399) {
           item.isValid = true;
           item.httpStatus = response.status;
-          resolve(item);
         } else {
           item.isValid = false;
           item.httpStatus = response.status;
-          resolve(item);
+          return item;
         }
       })
       .catch(error => {
         item.isValid = false;
         item.httpStatus = 400;
-        resolve(item);
-    });
-  });
+        return item;
+      });
 }
 
 function formatarSaida(option) {
