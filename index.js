@@ -37,13 +37,14 @@ function mdLinks(path, options) {
     if(err) {
       console.log('Erro ao acessar o caminho:', err);
     } else {
+      //Testa para saber se é um arquvivo
       if (stats.isFile()) {
-        console.log('[DEBUG] é arquivo')
         // Se for um arquivo, chame a função para processar o arquivo
-        processFile(path, options).then(() => formatarSaida(options));
+        processFile(path, options).then(() => 
+          formatarSaida(options)
+        );
       } else if (stats.isDirectory()) {
         // Se for um diretório, chame a função para processar todos os arquivos do diretório
-        console.log('[DEBUG] é diretorio')
         processDirectory(path, options);
       }
     }
@@ -58,7 +59,7 @@ function processFile(filePath, options) {
         resolve();
       } else {
         const lines = conteudo.split('\n');
-        verificaSeTemLink(lines)
+        verificaSeTemLinkEGuardaEmMemoria(filePath, lines)
         validateLink(options)
         .then(() => resolve())
         .catch(error => {
@@ -88,7 +89,7 @@ function processDirectory(directoryPath, options) {
 }
 
 
-function verificaSeTemLink(lines) {
+function verificaSeTemLinkEGuardaEmMemoria(filePath, lines) {
   //regex para testra se tem links no formato []()
   var regex = /\[(.*?)\]\((.*?)\)/;
   for(let i = 0; i<lines.length; i++){
@@ -99,7 +100,7 @@ function verificaSeTemLink(lines) {
     if (match && match.length === 3) {
       var text = match[1]; // Extrai o texto do link
       var link = match[2]; // Extrai o link
-      arrayLinks.push({"text": text, "link": link})
+      arrayLinks.push({"filePath":filePath, "text": text, "link": link})
       }
     }
 }
@@ -157,10 +158,10 @@ function outputList(option){
   for(let i = 0; i<arrayLinks.length; i++){
     let stringOutput = ""
     if(option.validate == true) {
-      stringOutput = `${path} ${arrayLinks[i].link} ${arrayLinks[i].isValid ? "ok" : "fail"} ${arrayLinks[i].httpStatus} ${arrayLinks[i].text} `
+      stringOutput = `${arrayLinks[i].filePath} ${arrayLinks[i].link} ${arrayLinks[i].isValid ? "ok" : "fail"} ${arrayLinks[i].httpStatus} ${arrayLinks[i].text} `
     }
     else {
-      stringOutput = `${path} ${arrayLinks[i].link} ${arrayLinks[i].text} `
+      stringOutput = `${arrayLinks[i].filePath} ${arrayLinks[i].link} ${arrayLinks[i].text} `
     }
     console.log(stringOutput)
   }
