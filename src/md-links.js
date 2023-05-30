@@ -65,7 +65,7 @@ function mdLinks(path, options) {
   
   function verificaSeTemLinkEGuardaEmMemoria(filePath, lines) {
     //regex para testra se tem links no formato []()
-    var regex = /\[(.*?)\]\((.*?)\)/;
+    var regex = /\[(.*?)\]\((.*?)\)/g;
     for(let i = 0; i<lines.length; i++){
       // Executando a expressão regular na string
       var match = regex.exec(lines[i]);
@@ -160,4 +160,12 @@ function mdLinks(path, options) {
   }
   
   // invoca o programa
-  module.exports = mdLinks;
+  module.exports = {
+    mdLinks,
+    verificaSeTemLinkEGuardaEmMemoria,
+    validateLink,
+    arrayLinks,
+    processFile,
+    processDirectory,
+    formatarSaida
+  }
