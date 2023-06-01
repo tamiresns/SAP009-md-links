@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 const { Command } = require('commander');
-const mdLinks  = require('./src/md-links.js');
+const { mdLinks } = require('./src/md-links.js');
 
 // Referencia da Lib
 // https://medium.com/henriquekuwai/criando-sua-cli-com-node-js-d6dee7d03110
 const program = new Command();
-
 function receberComandoCLIeIniciarPrograma() {
   program
   .arguments('<arquivo>')
